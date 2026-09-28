@@ -1,5 +1,6 @@
 import { Company, DigitalAnalysis, WebsiteConcept, ConceptLayoutType, SalesMessages, Proposal } from '@/types';
 import { DEMO_TEMPLATES } from '@/data/templates';
+import { detectNicheForCompany } from '@/lib/nicheAssets';
 import { store } from './store';
 
 export class AIService {
@@ -105,13 +106,9 @@ export class AIService {
   public static async generateWebsiteConcept(company: Company, variantIndex: number = 0): Promise<WebsiteConcept> {
     await new Promise((r) => setTimeout(r, 600));
 
-    const template = DEMO_TEMPLATES.find(t => 
-      t.segment.toLowerCase().includes(company.segment.toLowerCase()) || 
-      company.segment.toLowerCase().includes(t.segment.toLowerCase())
-    ) || DEMO_TEMPLATES[0];
-
+    const niche = detectNicheForCompany(company);
     const city = company.city || 'João Pinheiro - MG';
-    const baseColors = template.colors;
+    const baseColors = [niche.palette.primary, niche.palette.secondary, niche.palette.accent];
 
     // 5 Fundamentally Distinct Layout Architectures
     const variantConfigs: {
@@ -127,7 +124,7 @@ export class AIService {
       {
         title: 'Opção 1: Luxury Showcase VIP',
         layout_type: 'luxury',
-        style: 'Estética de luxo, tipografia clássica, acabamento nobre e lookbook em destaque',
+        style: 'Estética de alto padrão, tipografia nobre, acabamento refinado e autoridade',
         badge: 'Alto Padrão',
         palette: {
           primary: baseColors[0] || '#1A1A1A',
@@ -136,9 +133,9 @@ export class AIService {
           background: '#FCFBF9',
           text: '#1C1917'
         },
-        heroHeadline: template.hero_copy.replace('João Pinheiro', city),
-        heroSub: `A referência definitiva em ${company.segment} em ${city}. Curadoria exclusiva e padrão de qualidade inquestionável.`,
-        ctaText: 'Ver Coleção Exclusiva'
+        heroHeadline: niche.heroHeadline.replace('João Pinheiro', city),
+        heroSub: niche.heroSub.replace('João Pinheiro', city),
+        ctaText: niche.ctaText
       },
       {
         title: 'Opção 2: Dark Mode High-Tech & Conversão',
@@ -152,14 +149,14 @@ export class AIService {
           background: '#040810',
           text: '#F8FAFC'
         },
-        heroHeadline: `Agilidade, precisão e o melhor de ${company.segment} em ${city} direto no WhatsApp.`,
-        heroSub: `Conecte-se instantaneamente com nossa equipe e garanta atendimento prioritário sem filas nem espera.`,
+        heroHeadline: `Agilidade, precisão e excelência em ${company.segment} em ${city}.`,
+        heroSub: `Atendimento prioritário e sem burocracia direto no seu WhatsApp.`,
         ctaText: 'Falar no WhatsApp em 1 Clique'
       },
       {
         title: 'Opção 3: Minimalista Clean & Magazine',
         layout_type: 'minimal',
-        style: 'Minimalista puro, espaço em branco contemporâneo e foco absoluto no produto',
+        style: 'Minimalista contemporâneo, tipografia elegante e foco absoluto no que importa',
         badge: 'Design Clean',
         palette: {
           primary: '#09090B',
@@ -168,14 +165,14 @@ export class AIService {
           background: '#FFFFFF',
           text: '#18181B'
         },
-        heroHeadline: `Tudo o que você procura em ${company.segment}, de forma simples e transparente em ${city}.`,
-        heroSub: `Qualidade inquestionável, preços justos e satisfação comprovada por clientes de toda a região.`,
-        ctaText: 'Conhecer Nossas Soluções'
+        heroHeadline: `Qualidade e transparência em ${company.segment} em ${city}.`,
+        heroSub: `Cuidado com cada detalhe para você e sua família terem a melhor experiência.`,
+        ctaText: niche.ctaText
       },
       {
         title: 'Opção 4: Catálogo Comercial & Pedidos WhatsApp',
         layout_type: 'catalog',
-        style: 'Formato e-commerce e delivery local com seletor de categorias e botão rápido de compra',
+        style: 'Vitrine organizada de serviços com botões ágeis de contato e agendamento',
         badge: 'Vendas Diretas',
         palette: {
           primary: '#0F172A',
@@ -184,14 +181,14 @@ export class AIService {
           background: '#F8FAFC',
           text: '#0F172A'
         },
-        heroHeadline: `Os melhores produtos e soluções de ${company.segment} com entrega ágil em ${city}.`,
-        heroSub: `Navegue pelo nosso catálogo online e faça seu pedido direto pelo WhatsApp com total segurança.`,
-        ctaText: 'Fazer Pedido Agora'
+        heroHeadline: `Os melhores serviços e soluções em ${company.segment} com agilidade em ${city}.`,
+        heroSub: `Conheça nossos diferenciais e solicite informações direto com nossos especialistas.`,
+        ctaText: 'Solicitar Atendimento Online'
       },
       {
         title: 'Opção 5: Corporativo, Autoridade & Agendamento',
         layout_type: 'authority',
-        style: 'Institucional sólido, formulário de agendamento na primeira dobra e selos de credibilidade',
+        style: 'Institucional sólido, apresentação de credibilidade e chamada rápida para agendamento',
         badge: 'Autoridade & Confiança',
         palette: {
           primary: '#0369A1',
@@ -200,13 +197,15 @@ export class AIService {
           background: '#F0F9FF',
           text: '#0F172A'
         },
-        heroHeadline: `Excelência e segurança profissional em ${company.segment} para você e sua família em ${city}.`,
-        heroSub: `Corpo técnico certificado, infraestrutura completa e atendimento pontual e humanizado.`,
+        heroHeadline: `Excelência e segurança profissional em ${company.segment} para você em ${city}.`,
+        heroSub: `Corpo técnico especializado, infraestrutura moderna e atendimento humanizado.`,
         ctaText: 'Agendar Consulta / Horário'
       }
     ];
 
     const currentConfig = variantConfigs[variantIndex % variantConfigs.length];
+
+    const nicheImages = (company.photos && company.photos.length > 0) ? company.photos : niche.images;
 
     return {
       id: `cpt-${Date.now()}-${variantIndex}`,
@@ -223,25 +222,8 @@ export class AIService {
           subheadline: currentConfig.heroSub,
           cta_text: currentConfig.ctaText
         },
-        social_proof: [
-          `Referência em ${company.segment} em ${city}`,
-          `Centenas de clientes atendidos com nota 5 estrelas`,
-          'Atendimento ágil, personalizado e transparente'
-        ],
-        services: [
-          {
-            title: `Soluções Especiais em ${company.segment}`,
-            description: 'Serviços e produtos sob medida pensados para superar as expectativas dos clientes mais exigentes.'
-          },
-          {
-            title: 'Atendimento Consultivo e Rápido',
-            description: 'Nossa equipe está pronta para orientar a melhor escolha com total dedicação e respeito ao seu tempo.'
-          },
-          {
-            title: 'Garantia de Qualidade e Satisfação',
-            description: 'Padrão rigoroso em cada entrega, assegurando total tranquilidade para você e sua família.'
-          }
-        ],
+        social_proof: niche.socialProof,
+        services: niche.services,
         testimonials: [
           {
             name: 'Cliente Verificado',
@@ -258,19 +240,10 @@ export class AIService {
           address_highlight: `Localização Privilegiada em ${city}`,
           whatsapp_cta: `Fale agora no WhatsApp: ${company.whatsapp || 'Atendimento Oficial'}`
         },
-        faq: [
-          {
-            question: `Como funciona o atendimento da ${company.name}?`,
-            answer: `Você pode nos chamar diretamente pelo botão de WhatsApp para tirar dúvidas ou fazer seu pedido em menos de 1 minuto.`
-          },
-          {
-            question: `Quais as formas de pagamento aceitas?`,
-            answer: `Aceitamos Pix, cartões de crédito em até 12x e condições facilitadas para moradores de ${city}.`
-          }
-        ]
+        faq: niche.faq
       },
       active_sections: ['hero', 'social_proof', 'services', 'testimonials', 'location_cta', 'faq'],
-      image_suggestions: template.suggested_images,
+      image_suggestions: nicheImages,
       created_at: new Date().toISOString()
     };
   }

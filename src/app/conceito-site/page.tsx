@@ -26,13 +26,20 @@ import {
   SlidersHorizontal,
   Flame,
   Wand2,
-  FolderKanban
+  FolderKanban,
+  Trash2,
+  Pencil,
+  X,
+  MapPin,
+  Globe,
+  Phone
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { AIService } from '@/lib/aiService';
 import { Company, WebsiteConcept } from '@/types';
 import LiveSitePreview from '@/components/LiveSitePreview';
 import ConceptPDFView from '@/components/ConceptPDFView';
+import { NICHES, detectNicheForCompany, adaptConceptToNiche } from '@/lib/nicheAssets';
 import { 
   PRESET_STYLES, 
   PRESET_PALETTES, 
@@ -59,6 +66,17 @@ function ConceitoSiteContent() {
   const [customizerTab, setCustomizerTab] = useState<'layout' | 'style' | 'colors' | 'copy' | 'structure'>('layout');
   const [saveFeedback, setSaveFeedback] = useState(false);
   const [copiedHeadline, setCopiedHeadline] = useState(false);
+
+  // Edit company modal state (permite corrigir dados do Google Maps ou digitar novo)
+  const [isEditingCompany, setIsEditingCompany] = useState(false);
+  const [editCompanyName, setEditCompanyName] = useState('');
+  const [editCompanySegment, setEditCompanySegment] = useState('');
+  const [editCompanyCity, setEditCompanyCity] = useState('');
+  const [editCompanyWhatsapp, setEditCompanyWhatsapp] = useState('');
+  const [editCompanyMaps, setEditCompanyMaps] = useState('');
+  const [editCompanySite, setEditCompanySite] = useState('');
+  const [editCompanyPhotos, setEditCompanyPhotos] = useState('');
+  const [savingCompany, setSavingCompany] = useState(false);
 
   useEffect(() => {
     const list = store.getCompanies();
@@ -99,6 +117,7 @@ function ConceitoSiteContent() {
 
   const currentCompany = companies.find(c => c.id === selectedCompanyId);
   const currentConcept = concepts[selectedConceptIndex] || concepts[0] || null;
+  const detectedNiche = currentCompany ? detectNicheForCompany(currentCompany) : NICHES[0];
 
   // Generate a brand new variant option
   const handleAddNewOption = async () => {
@@ -127,6 +146,132 @@ function ConceitoSiteContent() {
     store.saveWebsiteConcept(updated);
     setSaveFeedback(true);
     setTimeout(() => setSaveFeedback(false), 2000);
+  };
+
+  // Excluir Opção / Estilo de site
+  const handleDeleteOption = (indexToDelete: number) => {
+    if (concepts.length <= 1) {
+      alert('Você deve manter pelo menos uma opção de demonstração de site.');
+      return;
+    }
+    const toDelete = concepts[indexToDelete];
+    if (!toDelete || !selectedCompanyId) return;
+
+    if (confirm(`Deseja realmente excluir "${toDelete.variant_title || `Opção ${indexToDelete + 1}`}"?`)) {
+      store.deleteWebsiteConcept(selectedCompanyId, toDelete.id);
+      const updated = concepts.filter((_, idx) => idx !== indexToDelete);
+      setConcepts(updated);
+      const newIdx = Math.max(0, Math.min(selectedConceptIndex, updated.length - 1));
+      setSelectedConceptIndex(newIdx);
+    }
+  };
+
+  // Mudar Ramo / Tipo de Site (Nicho) — Atualiza textos, fotos, serviços e paleta instantaneamente
+  const handleSelectNiche = (nicheId: string, applyToAll = false) => {
+    if (!currentCompany || !currentConcept) return;
+    const niche = NICHES.find(n => n.id === nicheId);
+    if (!niche) return;
+
+    // Atualiza o segmento da empresa para não voltar para o nicho anterior
+    const updatedCompany: Company = {
+      ...currentCompany,
+      segment: niche.name
+    };
+    store.saveCompany(updatedCompany);
+    setCompanies(prev => prev.map(c => c.id === updatedCompany.id ? updatedCompany : c));
+    
+    // Sincroniza com o banco Neon
+    fetch('/api/companies', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedCompany)
+    }).catch(err => console.error('Erro ao sincronizar segmento da empresa:', err));
+
+    if (applyToAll) {
+      const adaptedList = concepts.map(c => adaptConceptToNiche(c, updatedCompany, nicheId));
+      setConcepts(adaptedList);
+      adaptedList.forEach(c => store.saveWebsiteConcept(c));
+    } else {
+      const adapted = adaptConceptToNiche(currentConcept, updatedCompany, nicheId);
+      updateCurrentConcept(adapted);
+    }
+
+    setSaveFeedback(true);
+    setTimeout(() => setSaveFeedback(false), 2000);
+  };
+
+  // Abrir Modal de Edição da Empresa (Google Maps fix)
+  const handleOpenEditCompany = () => {
+    if (!currentCompany) return;
+    setEditCompanyName(currentCompany.name || '');
+    setEditCompanySegment(currentCompany.segment || '');
+    setEditCompanyCity(currentCompany.city || '');
+    setEditCompanyWhatsapp(currentCompany.whatsapp || '');
+    setEditCompanyMaps(currentCompany.google_maps_link || '');
+    setEditCompanySite(currentCompany.current_site || '');
+    setEditCompanyPhotos(currentCompany.photos?.join('\n') || '');
+    setIsEditingCompany(true);
+  };
+
+  // Salvar Edição da Empresa
+  const handleSaveCompany = async () => {
+    if (!currentCompany) return;
+    setSavingCompany(true);
+    try {
+      const photoList = editCompanyPhotos
+        .split('\n')
+        .map(p => p.trim())
+        .filter(p => p.startsWith('http'));
+
+      const updatedCompany: Company = {
+        ...currentCompany,
+        name: editCompanyName.trim() || currentCompany.name,
+        segment: editCompanySegment.trim() || currentCompany.segment,
+        city: editCompanyCity.trim() || currentCompany.city,
+        whatsapp: editCompanyWhatsapp.trim(),
+        google_maps_link: editCompanyMaps.trim(),
+        current_site: editCompanySite.trim(),
+        photos: photoList.length > 0 ? photoList : currentCompany.photos
+      };
+
+      store.saveCompany(updatedCompany);
+      setCompanies(prev => prev.map(c => c.id === updatedCompany.id ? updatedCompany : c));
+
+      // Persistir no banco Neon
+      await fetch('/api/companies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedCompany)
+      });
+
+      // Atualiza textos e fotos do conceito ativo
+      if (currentConcept) {
+        const city = updatedCompany.city || 'João Pinheiro';
+        const updatedConcept: WebsiteConcept = {
+          ...currentConcept,
+          visual_name: `${updatedCompany.name} — ${currentConcept.variant_title || 'Conceito'}`,
+          image_suggestions: (updatedCompany.photos && updatedCompany.photos.length > 0)
+            ? updatedCompany.photos
+            : currentConcept.image_suggestions,
+          site_structure: {
+            ...currentConcept.site_structure,
+            location_cta: {
+              ...currentConcept.site_structure.location_cta,
+              address_highlight: `Localização Privilegiada em ${city}`,
+              whatsapp_cta: `Fale agora no WhatsApp: ${updatedCompany.whatsapp || 'Atendimento Oficial'}`
+            }
+          }
+        };
+        updateCurrentConcept(updatedConcept);
+      }
+
+      setIsEditingCompany(false);
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao salvar informações da empresa.');
+    } finally {
+      setSavingCompany(false);
+    }
   };
 
   // Apply a layout architecture preset
@@ -260,6 +405,16 @@ function ConceitoSiteContent() {
                 </select>
               </div>
 
+              {/* Botão para Editar Informações da Empresa (Google Maps ou Manual) */}
+              <button
+                onClick={handleOpenEditCompany}
+                className="px-3.5 py-2 mt-auto rounded-xl bg-navy-800 hover:bg-navy-700 text-amber-400 hover:text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center space-x-1.5 transition-all shadow-sm"
+                title="Editar dados da empresa (nome, segmento, cidade, whatsapp, fotos do Google)"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                <span>Editar Empresa</span>
+              </button>
+
               <Link
                 href="/sites-salvos"
                 className="px-3.5 py-2 mt-auto rounded-xl bg-navy-800 hover:bg-navy-700 text-gray-200 hover:text-white border border-navy-700 text-xs font-bold flex items-center space-x-1.5 transition-all"
@@ -292,7 +447,68 @@ function ConceitoSiteContent() {
           ) : currentConcept && currentCompany ? (
             <div className="space-y-8">
               
-              {/* 1. SELETOR DE MÚLTIPLAS OPÇÕES / VARIAÇÕES DE SITES */}
+              {/* 1. SELETOR DE RAMO / TIPO DO SITE (NICHO) */}
+              <div className="bg-navy-900/90 p-4 rounded-2xl border border-navy-800 space-y-3">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs font-bold text-white uppercase tracking-wider">
+                        Ramo / Tipo do Negócio (Nicho do Site):
+                      </span>
+                      <span className="px-2.5 py-0.5 text-xs rounded-full font-bold bg-accent/20 text-accent border border-accent/40">
+                        {detectedNiche.name}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-0.5">
+                      Define automaticamente as fotos em alta definição, textos, serviços e diferenciais para que sejam 100% fiéis a este ramo.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => handleSelectNiche(detectedNiche.id, true)}
+                    className="px-3 py-1.5 rounded-lg bg-navy-800 hover:bg-navy-700 text-gray-200 hover:text-white border border-navy-700 text-xs font-semibold transition-all flex items-center space-x-1.5 self-start md:self-auto"
+                    title="Garante que todas as opções desta empresa tenham os textos e fotos deste ramo"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-accent" />
+                    <span>Aplicar Nicho a Todas as Opções</span>
+                  </button>
+                </div>
+
+                {/* Seletor rápido de nichos */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {NICHES.map((n) => {
+                    const isActive = detectedNiche.id === n.id;
+                    const icons: Record<string, string> = {
+                      odontologia: '🦷',
+                      restaurante: '🍔',
+                      clinica: '🩺',
+                      imobiliaria: '🏠',
+                      barbearia: '✂️',
+                      oficina: '🚗',
+                      academia: '💪',
+                      moda: '👗',
+                      agro_pet: '🐾'
+                    };
+                    return (
+                      <button
+                        key={n.id}
+                        onClick={() => handleSelectNiche(n.id, false)}
+                        className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                          isActive
+                            ? 'bg-accent/20 text-accent border-accent shadow-sm shadow-accent/10'
+                            : 'bg-navy-950 text-gray-300 border-navy-800 hover:border-gray-600'
+                        }`}
+                      >
+                        <span>{icons[n.id] || '🏷️'}</span>
+                        <span>{n.name.split('&')[0].trim()}</span>
+                        {isActive && <Check className="w-3 h-3 text-accent ml-0.5" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 2. SELETOR DE MÚLTIPLAS OPÇÕES / VARIAÇÕES DE SITES */}
               <div className="bg-navy-900/90 p-4 rounded-2xl border border-navy-800 space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex items-center space-x-2">
@@ -304,51 +520,84 @@ function ConceitoSiteContent() {
                     </span>
                   </div>
 
-                  <button
-                    onClick={handleAddNewOption}
-                    disabled={generatingNew}
-                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-navy-800 hover:bg-navy-700 text-accent hover:text-white border border-accent/25 text-xs font-semibold transition-all self-start sm:self-auto"
-                  >
-                    <PlusCircle className="w-3.5 h-3.5" />
-                    <span>{generatingNew ? 'Gerando...' : '+ Gerar Nova Opção com IA'}</span>
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    {concepts.length > 1 && (
+                      <button
+                        onClick={() => handleDeleteOption(selectedConceptIndex)}
+                        className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-400 hover:text-red-300 border border-red-500/30 text-xs font-semibold transition-all"
+                        title="Excluir o estilo/opção de site atualmente selecionado"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Excluir Esta Opção</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={handleAddNewOption}
+                      disabled={generatingNew}
+                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-navy-800 hover:bg-navy-700 text-accent hover:text-white border border-accent/25 text-xs font-semibold transition-all"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5" />
+                      <span>{generatingNew ? 'Gerando...' : '+ Gerar Nova Opção com IA'}</span>
+                    </button>
+                  </div>
                 </div>
 
-                {/* Tabs das Opções */}
+                {/* Tabs das Opções com botão de excluir individual */}
                 <div className="flex flex-wrap gap-2">
                   {concepts.map((c, idx) => {
                     const isSelected = idx === selectedConceptIndex;
                     return (
-                      <button
+                      <div
                         key={c.id}
-                        onClick={() => setSelectedConceptIndex(idx)}
-                        className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
+                        className={`flex items-center rounded-xl transition-all border ${
                           isSelected
                             ? 'bg-accent text-navy-950 border-accent shadow-md shadow-accent/20'
                             : 'bg-navy-950 text-gray-300 border-navy-800 hover:border-gray-600'
                         }`}
                       >
-                        <div
-                          className="w-3 h-3 rounded-full border border-black/30"
-                          style={{ backgroundColor: c.color_palette.primary }}
-                        />
-                        <span>{c.variant_title || `Opção ${idx + 1}`}</span>
-                        {c.custom_badge && (
-                          <span
-                            className={`px-1.5 py-0.2 text-[9px] rounded-full font-black ${
-                              isSelected ? 'bg-navy-950 text-accent' : 'bg-navy-800 text-gray-300'
+                        <button
+                          onClick={() => setSelectedConceptIndex(idx)}
+                          className="flex items-center space-x-2 px-3 py-2 text-xs font-bold"
+                        >
+                          <div
+                            className="w-3 h-3 rounded-full border border-black/30"
+                            style={{ backgroundColor: c.color_palette.primary }}
+                          />
+                          <span>{c.variant_title || `Opção ${idx + 1}`}</span>
+                          {c.custom_badge && (
+                            <span
+                              className={`px-1.5 py-0.2 text-[9px] rounded-full font-black ${
+                                isSelected ? 'bg-navy-950 text-accent' : 'bg-navy-800 text-gray-300'
+                              }`}
+                            >
+                              {c.custom_badge}
+                            </span>
+                          )}
+                        </button>
+                        {concepts.length > 1 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteOption(idx);
+                            }}
+                            className={`p-1.5 mr-1 rounded-lg transition-colors ${
+                              isSelected
+                                ? 'text-navy-950/70 hover:text-red-700 hover:bg-black/10'
+                                : 'text-gray-500 hover:text-red-400 hover:bg-red-500/10'
                             }`}
+                            title={`Excluir ${c.variant_title || `Opção ${idx + 1}`}`}
                           >
-                            {c.custom_badge}
-                          </span>
+                            <X className="w-3 h-3" />
+                          </button>
                         )}
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
               </div>
 
-              {/* 2. DEMONSTRAÇÃO VISUAL INTERATIVA (LIVE PREVIEW) */}
+              {/* 3. DEMONSTRAÇÃO VISUAL INTERATIVA (LIVE PREVIEW) */}
               <div className="space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
@@ -367,6 +616,17 @@ function ConceitoSiteContent() {
                         <Check className="w-3.5 h-3.5" />
                         <span>Alterações Salvas!</span>
                       </span>
+                    )}
+
+                    {concepts.length > 1 && (
+                      <button
+                        onClick={() => handleDeleteOption(selectedConceptIndex)}
+                        className="px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/30 text-xs font-bold flex items-center space-x-1.5 transition-all shadow"
+                        title="Excluir este modelo"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Excluir Opção</span>
+                      </button>
                     )}
 
                     <button
@@ -970,6 +1230,172 @@ function ConceitoSiteContent() {
             </div>
           ) : null}
         </>
+      )}
+
+      {/* MODAL DE EDIÇÃO DE DADOS DA EMPRESA (CORREÇÃO DO GOOGLE MAPS OU CADASTRO) */}
+      {isEditingCompany && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-navy-900 border border-navy-700 w-full max-w-xl rounded-3xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-navy-800 pb-4">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 rounded-xl bg-amber-400/10 text-amber-400 border border-amber-400/20">
+                  <Pencil className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white">Editar Dados da Empresa</h3>
+                  <p className="text-xs text-gray-400">
+                    Corrija informações vindas do Google Maps ou ajuste os dados para a demonstração
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsEditingCompany(false)}
+                className="p-1.5 rounded-lg bg-navy-800 hover:bg-navy-700 text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-300 mb-1">
+                  Nome da Empresa / Estabelecimento:
+                </label>
+                <input
+                  type="text"
+                  value={editCompanyName}
+                  onChange={(e) => setEditCompanyName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-navy-950 border border-navy-700 rounded-xl text-xs text-white focus:outline-none focus:border-accent"
+                  placeholder="Ex: Neo Orto Clínica Odontológica"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-300 mb-1">
+                  Ramo de Atuação / Segmento:
+                </label>
+                <input
+                  type="text"
+                  value={editCompanySegment}
+                  onChange={(e) => setEditCompanySegment(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-navy-950 border border-navy-700 rounded-xl text-xs text-white focus:outline-none focus:border-accent"
+                  placeholder="Ex: Odontologia & Estética Dental"
+                />
+                {/* Sugestões rápidas de nichos */}
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {NICHES.map(n => (
+                    <button
+                      key={n.id}
+                      type="button"
+                      onClick={() => setEditCompanySegment(n.name)}
+                      className={`text-[10px] px-2 py-0.5 rounded-md border transition-all ${
+                        editCompanySegment === n.name
+                          ? 'bg-accent/20 text-accent border-accent'
+                          : 'bg-navy-800 hover:bg-navy-700 text-gray-300 border-navy-700'
+                      }`}
+                    >
+                      {n.name.split('&')[0].trim()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-300 mb-1">
+                    Cidade / Bairro:
+                  </label>
+                  <input
+                    type="text"
+                    value={editCompanyCity}
+                    onChange={(e) => setEditCompanyCity(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-navy-950 border border-navy-700 rounded-xl text-xs text-white focus:outline-none focus:border-accent"
+                    placeholder="João Pinheiro - MG"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-300 mb-1">
+                    WhatsApp Comercial:
+                  </label>
+                  <input
+                    type="text"
+                    value={editCompanyWhatsapp}
+                    onChange={(e) => setEditCompanyWhatsapp(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-navy-950 border border-navy-700 rounded-xl text-xs text-white focus:outline-none focus:border-accent"
+                    placeholder="(38) 99999-9999"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-300 mb-1">
+                  Link da Ficha do Google Maps:
+                </label>
+                <input
+                  type="text"
+                  value={editCompanyMaps}
+                  onChange={(e) => setEditCompanyMaps(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-navy-950 border border-navy-700 rounded-xl text-xs text-white focus:outline-none focus:border-accent"
+                  placeholder="https://maps.google.com/..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-300 mb-1">
+                  Site Atual (se houver):
+                </label>
+                <input
+                  type="text"
+                  value={editCompanySite}
+                  onChange={(e) => setEditCompanySite(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-navy-950 border border-navy-700 rounded-xl text-xs text-white focus:outline-none focus:border-accent"
+                  placeholder="https://..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-300 mb-1">
+                  URLs de Fotos Reais da Empresa (uma por linha):
+                </label>
+                <textarea
+                  rows={3}
+                  value={editCompanyPhotos}
+                  onChange={(e) => setEditCompanyPhotos(e.target.value)}
+                  className="w-full px-3.5 py-2 bg-navy-950 border border-navy-700 rounded-xl text-xs text-white focus:outline-none focus:border-accent font-mono text-[11px]"
+                  placeholder="https://images.unsplash.com/...&#10;https://meusite.com/foto.jpg"
+                />
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Se preenchido, essas fotos reais substituirão as fotos sugeridas da demonstração do site.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 pt-4 border-t border-navy-800">
+              <button
+                type="button"
+                onClick={() => setIsEditingCompany(false)}
+                className="px-4 py-2 rounded-xl bg-navy-800 hover:bg-navy-700 text-xs font-bold text-gray-300"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveCompany}
+                disabled={savingCompany}
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-accent to-blue-500 text-navy-950 font-black text-xs shadow-md shadow-accent/20 hover:brightness-110 active:scale-95 transition-all flex items-center space-x-1.5"
+              >
+                {savingCompany ? (
+                  <span>Salvando...</span>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Salvar Dados Atualizados</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

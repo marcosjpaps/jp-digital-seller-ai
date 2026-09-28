@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { WebsiteConcept, Company, ConceptLayoutType } from '@/types';
+import { detectNicheForCompany } from '@/lib/nicheAssets';
 import { 
   Smartphone, 
   Monitor, 
@@ -46,9 +47,19 @@ export function SiteLayoutRenderer({ concept, company, isMobile }: SiteLayoutRen
   const cardRadius = isMinimal ? 'rounded-md' : isBold ? 'rounded-2xl' : 'rounded-3xl';
   const btnRadius = isMinimal ? 'rounded-md' : isBold ? 'rounded-xl' : 'rounded-full';
 
-  const heroImage = image_suggestions[0] || 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&auto=format&fit=crop';
-  const serviceImage = image_suggestions[1] || 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&auto=format&fit=crop';
-  const thirdImage = image_suggestions[2] || 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&auto=format&fit=crop';
+  const niche = detectNicheForCompany(company);
+  const isFashion = niche.id === 'moda';
+  const sanitizeImg = (imgUrl?: string, fallbackUrl?: string) => {
+    if (!imgUrl) return fallbackUrl || '';
+    if (!isFashion && (imgUrl.includes('photo-1490481651871') || imgUrl.includes('photo-1483985988355') || imgUrl.includes('photo-1469334031218'))) {
+      return fallbackUrl || '';
+    }
+    return imgUrl;
+  };
+
+  const heroImage = (company.photos && company.photos[0]) || sanitizeImg(image_suggestions[0], niche.images[0]);
+  const serviceImage = (company.photos && company.photos[1]) || sanitizeImg(image_suggestions[1], niche.images[1]);
+  const thirdImage = (company.photos && company.photos[2]) || sanitizeImg(image_suggestions[2], niche.images[2]);
 
   const cleanPhone = company.whatsapp?.replace(/\D/g, '') || '';
   const waUrl = cleanPhone 
