@@ -13,7 +13,8 @@ import {
   Trash2, 
   MapPin, 
   Globe, 
-  Phone 
+  Phone,
+  Compass
 } from 'lucide-react';
 import { InstagramIcon } from '@/components/Icons';
 import { store } from '@/lib/store';
@@ -56,13 +57,23 @@ export default function EmpresasPage() {
           </p>
         </div>
 
-        <Link
-          href="/empresas/novo"
-          className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-accent text-navy-950 font-bold text-xs shadow-lg shadow-accent/20 hover:brightness-110 active:scale-95 transition-all self-start sm:self-auto"
-        >
-          <PlusCircle className="w-4 h-4 font-black" />
-          <span>Cadastrar Nova Empresa</span>
-        </Link>
+        <div className="flex items-center space-x-3 self-start sm:self-auto">
+          <Link
+            href="/radar-maps"
+            className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-accent to-blue-600 text-navy-950 font-black text-xs shadow-lg shadow-accent/20 hover:brightness-110 active:scale-95 transition-all"
+          >
+            <Compass className="w-4 h-4" />
+            <span>Radar Google Maps</span>
+          </Link>
+
+          <Link
+            href="/empresas/novo"
+            className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-700 text-white border border-navy-700 font-bold text-xs hover:border-accent/40 transition-all"
+          >
+            <PlusCircle className="w-4 h-4 text-accent" />
+            <span>Cadastro Manual</span>
+          </Link>
+        </div>
       </div>
 
       {/* Filter and Search */}

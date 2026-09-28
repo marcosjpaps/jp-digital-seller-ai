@@ -18,7 +18,8 @@ import {
   ShieldCheck,
   ChevronRight,
   Flame,
-  LayoutTemplate
+  LayoutTemplate,
+  Compass
 } from 'lucide-react';
 import MetricCard from '@/components/MetricCard';
 import OpportunityBadge from '@/components/OpportunityBadge';
@@ -56,17 +57,24 @@ export default function DashboardPage() {
             JP DIGITAL <span className="text-accent">SELLER AI</span>
           </h1>
           <p className="mt-2 text-sm sm:text-base text-gray-300 leading-relaxed">
-            Seu vendedor digital assistido por Inteligência Artificial. Encontre empresas locais, gere diagnósticos instantâneos, crie conceitos visuais e feche sites profissionais.
+            Seu vendedor digital assistido por Inteligência Artificial. Encontre empresas locais no Google Maps, gere diagnósticos instantâneos, crie conceitos visuais e feche sites profissionais.
           </p>
         </div>
 
         {/* Quick Action Buttons */}
         <div className="z-10 flex flex-wrap gap-2.5 sm:self-center">
           <Link
-            href="/empresas/novo"
-            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-accent text-navy-950 font-black text-xs shadow-lg shadow-accent/25 hover:brightness-110 active:scale-95 transition-all"
+            href="/radar-maps"
+            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-accent to-blue-600 text-navy-950 font-black text-xs shadow-lg shadow-accent/25 hover:brightness-110 active:scale-95 transition-all"
           >
-            <PlusCircle className="w-4 h-4 font-black" />
+            <Compass className="w-4 h-4" />
+            <span>[ Radar Google Maps ]</span>
+          </Link>
+          <Link
+            href="/empresas/novo"
+            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-700 text-white font-bold text-xs border border-navy-700 transition-all"
+          >
+            <PlusCircle className="w-4 h-4 text-accent" />
             <span>[ Nova Empresa ]</span>
           </Link>
           <Link

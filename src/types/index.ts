@@ -266,3 +266,21 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   }
 };
 
+export interface ProspectLead {
+  id: string;
+  name: string;
+  segment: string;
+  city: string;
+  address?: string;
+  phone?: string;
+  whatsapp?: string;
+  has_website: boolean;
+  current_site?: string;
+  rating?: number;
+  reviews_count?: number;
+  google_maps_url: string;
+  opportunity_score: number;
+  opportunity_reason: string;
+  photo?: string;
+}
+

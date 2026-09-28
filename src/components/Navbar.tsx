@@ -21,7 +21,8 @@ import {
   FolderKanban,
   Settings,
   Lock,
-  LogIn
+  LogIn,
+  Compass
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { AuthUser } from '@/types';
@@ -52,6 +53,7 @@ export default function Navbar() {
 
   const navLinks = [
     { href: '/', label: 'Dashboard', icon: BarChart3 },
+    { href: '/radar-maps', label: 'Radar Maps', icon: Compass, badge: 'MAPS' },
     { href: '/empresas', label: 'Empresas', icon: Building2 },
     { href: '/analista-ia', label: 'Analista IA', icon: Sparkles, badge: 'IA' },
     { href: '/conceito-site', label: 'Conceito', icon: Zap },

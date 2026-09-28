@@ -11,7 +11,9 @@ import {
   FileText, 
   Image as ImageIcon,
   ArrowLeft,
-  Check
+  Check,
+  Compass,
+  Search
 } from 'lucide-react';
 import { InstagramIcon } from '@/components/Icons';
 import Link from 'next/link';
@@ -112,6 +114,30 @@ export default function NovaEmpresaPage() {
         <p className="text-xs text-gray-400 mt-1">
           Insira as informações encontradas no Instagram, Google Maps ou indicação local para acionar o Analista Digital IA.
         </p>
+      </div>
+
+      {/* Radar Maps Callout */}
+      <div className="bg-gradient-to-r from-accent/15 via-blue-600/10 to-transparent p-4 rounded-2xl border border-accent/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-accent text-navy-950 flex items-center justify-center font-black flex-shrink-0">
+            <Compass className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-xs font-black text-white uppercase tracking-wider">
+              Encontrar Empresas Automaticamente
+            </div>
+            <p className="text-xs text-gray-300">
+              Quer vasculhar o Google Maps da sua cidade para achar clientes sem site com 1 clique?
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/radar-maps"
+          className="px-3.5 py-2 rounded-xl bg-accent text-navy-950 font-black text-xs uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all flex items-center space-x-1.5 self-start sm:self-auto flex-shrink-0 shadow-md"
+        >
+          <span>Abrir Radar Google Maps</span>
+          <Compass className="w-3.5 h-3.5" />
+        </Link>
       </div>
 
       {/* Quick Presets by Segment */}
@@ -225,9 +251,23 @@ export default function NovaEmpresaPage() {
 
           {/* Link Google Maps */}
           <div>
-            <label className="block text-xs font-bold text-gray-200 uppercase tracking-wider mb-1.5">
-              Link Google Maps / Google Meu Negócio
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-bold text-gray-200 uppercase tracking-wider">
+                Link Google Maps / Google Meu Negócio
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  const query = `${formData.name || 'Empresa'} ${formData.city || ''}`.trim();
+                  const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+                  setFormData(prev => ({ ...prev, google_maps_link: url }));
+                }}
+                className="text-[11px] text-accent hover:underline flex items-center space-x-1 font-semibold"
+              >
+                <Search className="w-3 h-3" />
+                <span>Gerar Link do Google Maps</span>
+              </button>
+            </div>
             <div className="relative">
               <MapPin className="w-4 h-4 text-amber-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
