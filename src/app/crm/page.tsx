@@ -51,7 +51,7 @@ export default function CRMPage() {
   };
 
   return (
-    <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 pt-6 space-y-6">
       
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-navy-900/80 p-6 rounded-3xl border border-navy-800">

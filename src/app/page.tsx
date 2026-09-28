@@ -44,11 +44,11 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 pt-6 space-y-8">
       
       {/* Hero Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-navy-900 via-navy-850 to-navy-900 p-6 sm:p-8 rounded-3xl border border-navy-800 shadow-2xl relative overflow-hidden">
-        <div className="z-10 max-w-2xl">
+        <div className="z-10 max-w-4xl">
           <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-accent/15 text-accent text-xs font-bold border border-accent/25 mb-3">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Máquina de Venda de Sites Locais • João Pinheiro/MG</span>

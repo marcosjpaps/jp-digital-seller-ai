@@ -211,7 +211,7 @@ function ConceitoSiteContent() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 pt-6 space-y-6">
       
       {/* If in PDF export view mode, render dedicated ConceptPDFView */}
       {viewMode === 'pdf_export' && currentConcept && currentCompany ? (

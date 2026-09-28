@@ -62,7 +62,7 @@ export default function SitesSalvosPage() {
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 pt-6 space-y-6">
       
       {/* If in PDF viewer mode */}
       {pdfConcept ? (
@@ -163,7 +163,7 @@ export default function SitesSalvosPage() {
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
               {filtered.map(({ concept, company }) => {
                 const layoutInfo = PRESET_LAYOUTS.find(l => l.id === (concept.layout_type || 'luxury')) || PRESET_LAYOUTS[0];
                 const cleanPhone = company.whatsapp?.replace(/\D/g, '') || '';

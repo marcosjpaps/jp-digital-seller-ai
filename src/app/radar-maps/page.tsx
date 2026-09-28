@@ -169,11 +169,11 @@ export default function RadarMapsPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 space-y-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 pt-6 pb-16 space-y-6">
       
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-navy-900 via-navy-850 to-navy-900 p-6 sm:p-8 rounded-3xl border border-navy-800 shadow-2xl relative overflow-hidden">
-        <div className="max-w-3xl space-y-3">
+        <div className="max-w-4xl space-y-3">
           <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-accent/15 text-accent text-xs font-bold border border-accent/25">
             <Compass className="w-3.5 h-3.5 animate-spin-slow" />
             <span>Radar de Empresas Google Maps — João Pinheiro/MG & Região</span>
@@ -403,7 +403,7 @@ export default function RadarMapsPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
           {visibleLeads.map((lead) => {
             const isImported = importedIds[lead.id];
 

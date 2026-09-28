@@ -94,7 +94,7 @@ export default function NovaEmpresaPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
+    <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 pt-6 space-y-6">
       
       {/* Back button */}
       <Link

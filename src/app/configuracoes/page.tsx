@@ -139,7 +139,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 space-y-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 pt-6 pb-16 space-y-6">
       
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-navy-900/90 p-6 sm:p-8 rounded-3xl border border-navy-800 shadow-xl relative overflow-hidden">

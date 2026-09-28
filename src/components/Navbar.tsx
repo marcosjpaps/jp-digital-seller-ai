@@ -67,7 +67,7 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 bg-navy-950/85 backdrop-blur-md border-b border-navy-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10">
         <div className="flex items-center justify-between h-16">
           
           {/* Logo & City Badge */}
