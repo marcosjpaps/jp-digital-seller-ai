@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   Building2, 
   BarChart3, 
@@ -19,13 +19,16 @@ import {
   MapPin,
   ShieldCheck,
   FolderKanban,
-  Settings
+  Settings,
+  Lock,
+  LogIn
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { AuthUser } from '@/types';
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentCity, setCurrentCity] = useState('João Pinheiro - MG');
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -37,11 +40,15 @@ export default function Navbar() {
         setCurrentCity(s.agency.city);
       }
       const u = store.getCurrentUser();
-      if (u) {
-        setCurrentUser(u);
-      }
+      setCurrentUser(u || null);
     } catch {}
   }, [pathname]);
+
+  const handleLogout = () => {
+    store.logout();
+    setCurrentUser(null);
+    router.push('/auth');
+  };
 
   const navLinks = [
     { href: '/', label: 'Dashboard', icon: BarChart3 },
@@ -129,21 +136,41 @@ export default function Navbar() {
               <Settings className="w-4 h-4" />
             </Link>
 
-            <Link
-              href="/auth"
-              className="flex items-center space-x-2 px-2.5 py-1.5 rounded-lg border border-navy-700 bg-navy-900 text-gray-200 hover:text-white text-xs font-medium hover:border-accent/40 transition-colors"
-              title={`Conectado como ${currentUser?.name || 'Marcos Antonio'}`}
-            >
-              <div className="w-6 h-6 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center text-[10px] font-black text-accent uppercase">
-                {currentUser?.name ? currentUser.name.slice(0, 2).toUpperCase() : 'MA'}
+            {currentUser ? (
+              <div className="flex items-center space-x-2">
+                <div
+                  className="flex items-center space-x-2 px-2.5 py-1.5 rounded-lg border border-navy-700 bg-navy-900 text-gray-200 text-xs font-medium"
+                  title={`Conectado como ${currentUser.name}`}
+                >
+                  <div className="w-6 h-6 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center text-[10px] font-black text-accent uppercase">
+                    {currentUser.name ? currentUser.name.slice(0, 2).toUpperCase() : 'US'}
+                  </div>
+                  <div className="hidden lg:flex flex-col text-left leading-none">
+                    <span className="text-xs font-bold text-white truncate max-w-[120px]">
+                      {currentUser.name}
+                    </span>
+                    <span className="text-[9px] text-accent font-semibold pt-0.5">Admin</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="p-2 rounded-lg border border-navy-700 bg-navy-900 text-gray-400 hover:text-rose-400 hover:border-rose-500/40 transition-colors"
+                  title="Sair da Conta (Logout)"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
               </div>
-              <div className="hidden lg:flex flex-col text-left leading-none">
-                <span className="text-xs font-bold text-white truncate max-w-[120px]">
-                  {currentUser?.name || 'Marcos Antonio'}
-                </span>
-                <span className="text-[9px] text-accent font-semibold pt-0.5">Admin VIP</span>
-              </div>
-            </Link>
+            ) : (
+              <Link
+                href="/auth"
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-navy-900 hover:bg-navy-800 text-gray-200 hover:text-white text-xs font-bold border border-navy-700 hover:border-accent/50 transition-colors shadow-sm"
+              >
+                <Lock className="w-3.5 h-3.5 text-accent" />
+                <span>Entrar</span>
+              </Link>
+            )}
           </div>
 
           {/* Mobile hamburger button */}
@@ -196,14 +223,32 @@ export default function Navbar() {
             );
           })}
           <div className="pt-3 border-t border-navy-800 flex items-center justify-between">
-            <Link
-              href="/auth"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center space-x-2 text-xs text-gray-400 hover:text-white"
-            >
-              <ShieldCheck className="w-4 h-4 text-accent" />
-              <span>Painel de Autenticação / Supabase</span>
-            </Link>
+            {currentUser ? (
+              <div className="flex items-center justify-between w-full">
+                <span className="text-xs text-gray-300 font-medium truncate">
+                  {currentUser.name}
+                </span>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="flex items-center space-x-1.5 text-xs text-rose-400 hover:text-rose-300 font-bold"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Sair</span>
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/auth"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center space-x-2 text-xs text-accent hover:underline font-bold"
+              >
+                <Lock className="w-4 h-4" />
+                <span>Fazer Login</span>
+              </Link>
+            )}
           </div>
         </div>
       )}

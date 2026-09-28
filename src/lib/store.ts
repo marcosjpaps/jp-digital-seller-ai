@@ -685,16 +685,15 @@ class DataStore {
   }
 
   public getCurrentUser(): AuthUser | null {
-    if (typeof window === 'undefined') return DEFAULT_USER;
+    if (typeof window === 'undefined') return null;
     try {
       const data = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
       if (!data) {
-        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(DEFAULT_USER));
-        return DEFAULT_USER;
+        return null;
       }
       return JSON.parse(data);
     } catch {
-      return DEFAULT_USER;
+      return null;
     }
   }
 

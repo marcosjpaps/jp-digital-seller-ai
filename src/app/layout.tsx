@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import Navbar from '@/components/Navbar';
+import AuthGuard from '@/components/AuthGuard';
 
 export const metadata: Metadata = {
   title: 'JP Digital Seller AI — Vendedor Digital Inteligente para Negócios Locais',
@@ -17,7 +18,9 @@ export default function RootLayout({
       <body className="bg-navy-950 text-slate-100 antialiased min-h-screen flex flex-col selection:bg-accent selection:text-navy-950">
         <Navbar />
         <main className="flex-1 pb-16">
-          {children}
+          <AuthGuard>
+            {children}
+          </AuthGuard>
         </main>
         
         {/* Footer */}
