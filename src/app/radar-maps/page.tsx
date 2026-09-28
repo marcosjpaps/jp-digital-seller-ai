@@ -40,11 +40,16 @@ export default function RadarMapsPage() {
   const [city, setCity] = useState('João Pinheiro - MG');
   const [segment, setSegment] = useState('Restaurantes & Gastronomia');
   const [onlyWithoutSite, setOnlyWithoutSite] = useState(true);
-  const [leads, setLeads] = useState<ProspectLead[]>([]);
+  const [allLeads, setAllLeads] = useState<ProspectLead[]>([]);
   const [loading, setLoading] = useState(false);
   const [googleMapsUrl, setGoogleMapsUrl] = useState('');
   const [importedIds, setImportedIds] = useState<Record<string, boolean>>({});
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  // Instant client-side filtering for 0ms response when clicking toggle
+  const visibleLeads = onlyWithoutSite 
+    ? allLeads.filter(l => !l.has_website) 
+    : allLeads;
 
   useEffect(() => {
     try {
@@ -53,11 +58,11 @@ export default function RadarMapsPage() {
         setCity(s.agency.city);
       }
     } catch {}
-    // Trigger initial scan
-    scanMaps('João Pinheiro - MG', 'Restaurantes & Gastronomia', true);
+    // Trigger initial scan fetching all leads so toggle can switch between both states
+    scanMaps('João Pinheiro - MG', 'Restaurantes & Gastronomia');
   }, []);
 
-  const scanMaps = async (searchCity = city, searchSegment = segment, searchWithoutSite = onlyWithoutSite) => {
+  const scanMaps = async (searchCity = city, searchSegment = segment) => {
     setLoading(true);
     setStatusMessage(null);
     try {
@@ -67,12 +72,12 @@ export default function RadarMapsPage() {
         body: JSON.stringify({
           city: searchCity,
           segment: searchSegment,
-          onlyWithoutSite: searchWithoutSite
+          onlyWithoutSite: false // fetch all so toggle can show/hide with 0ms delay
         })
       });
       const data = await res.json();
       if (data.leads) {
-        setLeads(data.leads);
+        setAllLeads(data.leads);
         setGoogleMapsUrl(data.google_maps_search_query_url || '');
       }
     } catch (err) {
@@ -179,7 +184,7 @@ export default function RadarMapsPage() {
           {/* Action Buttons */}
           <div className="flex items-end gap-2">
             <button
-              onClick={() => scanMaps(city, segment, onlyWithoutSite)}
+              onClick={() => scanMaps(city, segment)}
               disabled={loading}
               className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-accent to-blue-600 text-navy-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-accent/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center space-x-2"
             >
@@ -208,42 +213,65 @@ export default function RadarMapsPage() {
           </div>
         </div>
 
-        {/* Quick Segment Chips */}
-        <div className="pt-2 border-t border-navy-800 flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-bold text-gray-400 mr-1 flex items-center space-x-1">
-            <Flame className="w-3.5 h-3.5 text-accent" />
-            <span>Nichos Rápidos:</span>
-          </span>
-          {PRESET_SEGMENTS.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => {
-                setSegment(s);
-                scanMaps(city, s, onlyWithoutSite);
-              }}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
-                segment === s
-                  ? 'bg-accent text-navy-950 font-bold'
-                  : 'bg-navy-950 text-gray-300 hover:text-white border border-navy-800 hover:border-navy-700'
-              }`}
-            >
-              {s}
-            </button>
-          ))}
+        {/* Quick Segment Chips & Custom Filter Toggle */}
+        <div className="pt-3 border-t border-navy-800 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-bold text-gray-400 mr-1 flex items-center space-x-1">
+              <Flame className="w-3.5 h-3.5 text-accent" />
+              <span>Nichos Rápidos:</span>
+            </span>
+            {PRESET_SEGMENTS.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => {
+                  setSegment(s);
+                  scanMaps(city, s);
+                }}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                  segment === s
+                    ? 'bg-accent text-navy-950 font-bold'
+                    : 'bg-navy-950 text-gray-300 hover:text-white border border-navy-800 hover:border-navy-700'
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
 
-          <label className="ml-auto inline-flex items-center space-x-2 cursor-pointer text-xs text-gray-300 font-medium">
-            <input
-              type="checkbox"
-              checked={onlyWithoutSite}
-              onChange={(e) => {
-                setOnlyWithoutSite(e.target.checked);
-                scanMaps(city, segment, e.target.checked);
-              }}
-              className="rounded bg-navy-950 border-navy-700 text-accent focus:ring-accent"
-            />
-            <span className="text-amber-400 font-bold">Apenas empresas SEM site (Oportunidades de Ouro)</span>
-          </label>
+          {/* Interactive Toggle Button for Golden Opportunities */}
+          <button
+            type="button"
+            onClick={() => setOnlyWithoutSite(!onlyWithoutSite)}
+            className={`flex items-center space-x-3 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer ${
+              onlyWithoutSite
+                ? 'bg-amber-500/15 border-amber-500/60 text-amber-300 hover:bg-amber-500/25'
+                : 'bg-navy-950 border-navy-700 text-gray-400 hover:border-gray-500 hover:text-gray-200'
+            }`}
+            title="Clique para alternar o filtro de empresas sem site"
+          >
+            {/* Visual Animated Switch */}
+            <div className={`w-9 h-5 rounded-full transition-colors relative flex items-center p-0.5 pointer-events-none ${
+              onlyWithoutSite ? 'bg-amber-500' : 'bg-navy-800 border border-navy-700'
+            }`}>
+              <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform ${
+                onlyWithoutSite ? 'translate-x-4' : 'translate-x-0'
+              }`} />
+            </div>
+
+            <div className="flex items-center space-x-2 pointer-events-none">
+              <span className="font-extrabold tracking-wide">
+                Apenas empresas SEM site (Oportunidades de Ouro)
+              </span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${
+                onlyWithoutSite 
+                  ? 'bg-amber-500 text-navy-950' 
+                  : 'bg-navy-800 text-gray-400 border border-navy-700'
+              }`}>
+                {onlyWithoutSite ? 'ATIVO' : 'TODAS'}
+              </span>
+            </div>
+          </button>
         </div>
       </div>
 
@@ -261,15 +289,20 @@ export default function RadarMapsPage() {
           <div className="flex items-center space-x-2">
             <Building2 className="w-5 h-5 text-accent" />
             <h2 className="text-lg font-black text-white">
-              Empresas Encontradas ({leads.length})
+              Empresas Encontradas ({visibleLeads.length} de {allLeads.length})
             </h2>
+            {onlyWithoutSite && (
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                Filtrado: Apenas Sem Site
+              </span>
+            )}
           </div>
           <span className="text-xs text-gray-400 font-mono">
             Radar em: <strong className="text-white">{city}</strong> • {segment}
           </span>
         </div>
 
-        {leads.length === 0 && !loading && (
+        {visibleLeads.length === 0 && !loading && (
           <div className="p-12 text-center bg-navy-900/50 rounded-3xl border border-navy-800 space-y-3">
             <Compass className="w-10 h-10 text-gray-600 mx-auto" />
             <p className="text-sm font-bold text-gray-400">
@@ -282,7 +315,7 @@ export default function RadarMapsPage() {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {leads.map((lead) => {
+          {visibleLeads.map((lead) => {
             const isImported = importedIds[lead.id];
 
             return (

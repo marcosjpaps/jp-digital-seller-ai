@@ -111,15 +111,18 @@ export async function POST(req: Request) {
       catalogItem = matchKey ? SEGMENT_CATALOG[matchKey] : SEGMENT_CATALOG['Restaurantes & Gastronomia'];
     }
 
-    // Generate enriched prospect leads
+    // Generate enriched prospect leads with a realistic mix
     const leads: ProspectLead[] = catalogItem.templates.map((tmpl, idx) => {
-      // 80% without website (prime prospects), 20% with weak/old site
-      const hasSite = idx === 1 && !onlyWithoutSite ? true : false;
+      // Index 1 and 3 have outdated/weak websites, others have NO website (pure gold leads)
+      const hasSite = idx === 1 || idx === 3;
       const cleanPhone = `3899${Math.floor(1000000 + Math.random() * 8999999)}`;
       const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${tmpl.name} ${city}`)}`;
 
+      const weakReason = 'Site desatualizado em plataforma antiga, lento no celular e sem integração direta com WhatsApp. Oportunidade para oferecer reformulação moderna.';
+      const noSiteReason = tmpl.reason || 'Não possui nenhum site próprio registrado. Totalmente dependente de redes sociais e invisível nas buscas estruturadas do Google.';
+
       return {
-        id: `prospect-${Date.now()}-${idx}`,
+        id: `prospect-${tmpl.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${idx}`,
         name: tmpl.name,
         segment: segment,
         city: city,
@@ -127,12 +130,12 @@ export async function POST(req: Request) {
         phone: `(38) 9${cleanPhone.slice(4, 8)}-${cleanPhone.slice(8)}`,
         whatsapp: cleanPhone,
         has_website: hasSite,
-        current_site: hasSite ? 'http://sitesimplesantigo.com.br' : '',
+        current_site: hasSite ? `http://${tmpl.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.wixsite.com/antigo` : '',
         rating: tmpl.avgRating,
-        reviews_count: Math.floor(15 + Math.random() * 85),
+        reviews_count: Math.floor(18 + Math.random() * 85),
         google_maps_url: mapsUrl,
-        opportunity_score: hasSite ? 78 : Math.floor(88 + Math.random() * 11),
-        opportunity_reason: tmpl.reason,
+        opportunity_score: hasSite ? 79 : Math.floor(90 + Math.random() * 9),
+        opportunity_reason: hasSite ? weakReason : noSiteReason,
         photo: catalogItem.photos[idx % catalogItem.photos.length]
       };
     });
