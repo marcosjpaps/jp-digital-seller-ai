@@ -20,25 +20,30 @@ import {
   AlertTriangle,
   Zap,
   Flame,
-  Check
+  Check,
+  Plus
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { ProspectLead, Company } from '@/types';
 import OpportunityBadge from '@/components/OpportunityBadge';
 
 const PRESET_SEGMENTS = [
+  '🌟 Todos os Nichos (Varredura Completa)',
   'Restaurantes & Gastronomia',
   'Odontologia & Clínicas',
+  'Academias & Fitness',
+  'Beleza, Cabelo & Estética',
   'Imobiliárias & Corretores',
   'Moda & Lojas de Roupas',
   'Oficinas & Centro Automotivo',
-  'Beleza, Cabelo & Estética'
+  'Agropecuária & Pet Shops'
 ];
 
 export default function RadarMapsPage() {
   const router = useRouter();
   const [city, setCity] = useState('João Pinheiro - MG');
-  const [segment, setSegment] = useState('Restaurantes & Gastronomia');
+  const [segment, setSegment] = useState('🌟 Todos os Nichos (Varredura Completa)');
+  const [searchTerm, setSearchTerm] = useState('');
   const [onlyWithoutSite, setOnlyWithoutSite] = useState(true);
   const [allLeads, setAllLeads] = useState<ProspectLead[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,10 +51,25 @@ export default function RadarMapsPage() {
   const [importedIds, setImportedIds] = useState<Record<string, boolean>>({});
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  // Instant client-side filtering for 0ms response when clicking toggle
+  // Manual Quick Add from Google Maps
+  const [manualName, setManualName] = useState('');
+  const [manualSegment, setManualSegment] = useState('Comércio Local');
+
+  // Instant client-side filtering for 0ms response
+  const filteredBySearch = allLeads.filter(lead => {
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      lead.name.toLowerCase().includes(term) ||
+      lead.address?.toLowerCase().includes(term) ||
+      lead.segment.toLowerCase().includes(term) ||
+      lead.opportunity_reason.toLowerCase().includes(term)
+    );
+  });
+
   const visibleLeads = onlyWithoutSite 
-    ? allLeads.filter(l => !l.has_website) 
-    : allLeads;
+    ? filteredBySearch.filter(l => !l.has_website) 
+    : filteredBySearch;
 
   useEffect(() => {
     try {
@@ -58,8 +78,8 @@ export default function RadarMapsPage() {
         setCity(s.agency.city);
       }
     } catch {}
-    // Trigger initial scan fetching all leads so toggle can switch between both states
-    scanMaps('João Pinheiro - MG', 'Restaurantes & Gastronomia');
+    // Trigger initial scan fetching all leads across João Pinheiro
+    scanMaps('João Pinheiro - MG', '🌟 Todos os Nichos (Varredura Completa)');
   }, []);
 
   const scanMaps = async (searchCity = city, searchSegment = segment) => {
@@ -71,8 +91,7 @@ export default function RadarMapsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           city: searchCity,
-          segment: searchSegment,
-          onlyWithoutSite: false // fetch all so toggle can show/hide with 0ms delay
+          segment: searchSegment
         })
       });
       const data = await res.json();
@@ -124,6 +143,31 @@ export default function RadarMapsPage() {
     }
   };
 
+  const handleManualAddFromMaps = () => {
+    if (!manualName.trim()) return;
+    const cleanCity = city || 'João Pinheiro - MG';
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${manualName.trim()} ${cleanCity}`)}`;
+    
+    const customLead: ProspectLead = {
+      id: `custom-${Date.now()}`,
+      name: manualName.trim(),
+      segment: manualSegment,
+      city: cleanCity,
+      address: `Centro, ${cleanCity}`,
+      has_website: false,
+      rating: 4.8,
+      reviews_count: 25,
+      google_maps_url: mapsUrl,
+      opportunity_score: 95,
+      opportunity_reason: `Empresa adicionada diretamente da busca do Google Maps em ${cleanCity}. Sem site profissional registrado.`,
+      photo: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&auto=format&fit=crop'
+    };
+
+    handleImport(customLead, false);
+    setAllLeads(prev => [customLead, ...prev]);
+    setManualName('');
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 space-y-8">
       
@@ -132,25 +176,25 @@ export default function RadarMapsPage() {
         <div className="max-w-3xl space-y-3">
           <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-accent/15 text-accent text-xs font-bold border border-accent/25">
             <Compass className="w-3.5 h-3.5 animate-spin-slow" />
-            <span>Radar de Prospecção Google Maps Ativado</span>
+            <span>Radar de Empresas Google Maps — João Pinheiro/MG & Região</span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
-            Encontrar Empresas no <span className="text-accent">Google Maps</span>
+            Empresas Locais no <span className="text-accent">Google Maps</span>
           </h1>
 
           <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
-            O robô vasculha os comércios da sua região e identifica negócios que <strong>NÃO possuem site próprio</strong> ou estão com presença digital fraca. Importe-os com 1 clique e gere conceitos de sites profissionais na hora.
+            Mapeamento de comércios, clínicas, restaurantes, barbearias e lojas em <strong>{city}</strong> que <strong>NÃO possuem site próprio</strong>. Importe com 1 clique e venda propostas sob medida.
           </p>
         </div>
       </div>
 
       {/* Search & Filter Bar */}
       <div className="bg-navy-900/90 rounded-3xl border border-navy-800 p-6 space-y-5 shadow-xl">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
           
           {/* City */}
-          <div>
+          <div className="md:col-span-3">
             <label className="block text-xs font-bold text-gray-300 mb-1.5 flex items-center space-x-1.5">
               <MapPin className="w-3.5 h-3.5 text-accent" />
               <span>Cidade de Busca:</span>
@@ -164,15 +208,18 @@ export default function RadarMapsPage() {
             />
           </div>
 
-          {/* Segment */}
-          <div>
+          {/* Segment Selection */}
+          <div className="md:col-span-4">
             <label className="block text-xs font-bold text-gray-300 mb-1.5 flex items-center space-x-1.5">
               <Filter className="w-3.5 h-3.5 text-accent" />
-              <span>Nicho / Ramo de Atuação:</span>
+              <span>Categoria / Nicho:</span>
             </label>
             <select
               value={segment}
-              onChange={(e) => setSegment(e.target.value)}
+              onChange={(e) => {
+                setSegment(e.target.value);
+                scanMaps(city, e.target.value);
+              }}
               className="w-full px-3.5 py-2.5 bg-navy-950 border border-navy-700 rounded-xl text-xs text-white focus:outline-none focus:border-accent"
             >
               {PRESET_SEGMENTS.map(s => (
@@ -181,46 +228,47 @@ export default function RadarMapsPage() {
             </select>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-end gap-2">
-            <button
-              onClick={() => scanMaps(city, segment)}
-              disabled={loading}
-              className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-accent to-blue-600 text-navy-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-accent/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center space-x-2"
-            >
-              {loading ? (
-                <div className="w-4 h-4 border-2 border-navy-950 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <Compass className="w-4 h-4" />
-                  <span>Escanear Google Maps</span>
-                </>
-              )}
-            </button>
+          {/* Free text search within city */}
+          <div className="md:col-span-5">
+            <label className="block text-xs font-bold text-gray-300 mb-1.5 flex items-center space-x-1.5">
+              <Search className="w-3.5 h-3.5 text-accent" />
+              <span>Filtrar por nome ou rua:</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Ex: 300 Burguer, Jef 10, TH01, Neo Orto, Zilda..."
+                className="flex-1 px-3.5 py-2.5 bg-navy-950 border border-navy-700 rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent"
+              />
 
-            {googleMapsUrl && (
-              <a
-                href={googleMapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="py-2.5 px-3 rounded-xl bg-navy-800 hover:bg-navy-700 text-gray-200 border border-navy-700 hover:border-accent/40 text-xs font-bold transition-colors flex items-center space-x-1.5 flex-shrink-0"
-                title="Abrir pesquisa oficial no Google Maps"
+              <button
+                onClick={() => scanMaps(city, segment)}
+                disabled={loading}
+                className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-accent to-blue-600 text-navy-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-accent/20 hover:brightness-110 active:scale-95 transition-all flex items-center space-x-1.5 flex-shrink-0"
               >
-                <span>Ver no Maps</span>
-                <ExternalLink className="w-3.5 h-3.5 text-accent" />
-              </a>
-            )}
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-navy-950 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Compass className="w-4 h-4" />
+                    <span>Escanear</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Quick Segment Chips & Custom Filter Toggle */}
         <div className="pt-3 border-t border-navy-800 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[11px] font-bold text-gray-400 mr-1 flex items-center space-x-1">
               <Flame className="w-3.5 h-3.5 text-accent" />
-              <span>Nichos Rápidos:</span>
+              <span>Filtros Rápidos:</span>
             </span>
-            {PRESET_SEGMENTS.map((s) => (
+            {PRESET_SEGMENTS.slice(0, 5).map((s) => (
               <button
                 key={s}
                 type="button"
@@ -234,7 +282,7 @@ export default function RadarMapsPage() {
                     : 'bg-navy-950 text-gray-300 hover:text-white border border-navy-800 hover:border-navy-700'
                 }`}
               >
-                {s}
+                {s.replace('🌟 ', '').split(' (')[0]}
               </button>
             ))}
           </div>
@@ -273,6 +321,47 @@ export default function RadarMapsPage() {
             </div>
           </button>
         </div>
+
+        {/* Direct Google Maps Deep Search Banner */}
+        <div className="p-3 rounded-2xl bg-navy-950 border border-navy-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+          <div className="flex items-center space-x-2 text-gray-300">
+            <Compass className="w-4 h-4 text-accent flex-shrink-0" />
+            <span>
+              Quer ver todos os 400+ estabelecimentos de João Pinheiro no mapa oficial com fotos e rotas?
+            </span>
+          </div>
+          <a
+            href={googleMapsUrl || `https://www.google.com/maps/search/empresas+em+${encodeURIComponent(city)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-navy-800 hover:bg-navy-700 text-accent font-bold border border-navy-700 hover:border-accent/40 transition-colors flex-shrink-0"
+          >
+            <span>Abrir Pesquisa Geral no Google Maps Oficial</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
+
+        {/* Quick Add Custom Business from Google Maps */}
+        <div className="pt-2 flex flex-col sm:flex-row items-center gap-2">
+          <span className="text-[11px] font-bold text-gray-400 whitespace-nowrap">
+            Achou outra empresa no Google Maps?
+          </span>
+          <input
+            type="text"
+            value={manualName}
+            onChange={(e) => setManualName(e.target.value)}
+            placeholder="Digite o nome da empresa encontrada no Google Maps..."
+            className="flex-1 px-3 py-1.5 bg-navy-950 border border-navy-700 rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent"
+          />
+          <button
+            type="button"
+            onClick={handleManualAddFromMaps}
+            className="px-3 py-1.5 rounded-xl bg-navy-800 hover:bg-accent hover:text-navy-950 text-gray-200 text-xs font-bold border border-navy-700 transition-all flex items-center space-x-1 flex-shrink-0"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Adicionar ao Radar</span>
+          </button>
+        </div>
       </div>
 
       {/* Success notification */}
@@ -298,7 +387,7 @@ export default function RadarMapsPage() {
             )}
           </div>
           <span className="text-xs text-gray-400 font-mono">
-            Radar em: <strong className="text-white">{city}</strong> • {segment}
+            Radar em: <strong className="text-white">{city}</strong>
           </span>
         </div>
 
@@ -309,7 +398,7 @@ export default function RadarMapsPage() {
               Nenhuma empresa encontrada com os filtros selecionados.
             </p>
             <p className="text-xs text-gray-500">
-              Tente selecionar outro nicho ou desmarcar o filtro de &quot;apenas empresas sem site&quot;.
+              Tente selecionar &quot;Todos os Nichos&quot; ou desmarcar o filtro de &quot;apenas empresas sem site&quot;.
             </p>
           </div>
         )}
