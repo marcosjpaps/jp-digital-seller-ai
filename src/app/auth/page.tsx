@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Zap, 
@@ -20,7 +20,14 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [currentUser, setCurrentUser] = useState(() => store.getCurrentUser());
+  const [currentUser, setCurrentUser] = useState<ReturnType<typeof store.getCurrentUser>>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/me', { cache: 'no-store', credentials: 'same-origin' })
+      .then(async res => { if (!res.ok) return null; const data = await res.json(); return data.authenticated ? data.user : null; })
+      .then(user => { setCurrentUser(user); if (user) store.setCurrentUser(user); else store.logout(); })
+      .catch(() => { setCurrentUser(null); store.logout(); });
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,44 +62,22 @@ export default function AuthPage() {
         return;
       }
 
-      // 2. Fallback to local authentication if network or offline
-      const localResult = store.loginUser(email, password);
-      if (localResult.user) {
-        store.setCurrentUser(localResult.user);
-        setCurrentUser(localResult.user);
-        setStatusMessage({ 
-          text: `Autenticado com sucesso! Bem-vindo, ${localResult.user.name}.`, 
-          type: 'success' 
-        });
-        setTimeout(() => {
-          router.push('/');
-        }, 700);
-      } else {
-        setStatusMessage({ 
-          text: data.error || localResult.error || 'Credenciais inválidas. Verifique e tente novamente.', 
-          type: 'error' 
-        });
-      }
-    } catch (err: any) {
-      // Offline fallback
-      const localResult = store.loginUser(email, password);
-      if (localResult.user) {
-        store.setCurrentUser(localResult.user);
-        setCurrentUser(localResult.user);
-        setStatusMessage({ text: 'Login realizado com sucesso!', type: 'success' });
-        setTimeout(() => router.push('/'), 700);
-      } else {
-        setStatusMessage({ 
-          text: 'Falha na autenticação. Verifique seu e-mail e senha.', 
-          type: 'error' 
-        });
-      }
+      setStatusMessage({
+        text: data.error || 'Não foi possível autenticar. Verifique suas credenciais.',
+        type: 'error'
+      });
+    } catch {
+      setStatusMessage({
+        text: 'Não foi possível verificar a autenticação no servidor.',
+        type: 'error'
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
     store.logout();
     setCurrentUser(null);
     setEmail('');
