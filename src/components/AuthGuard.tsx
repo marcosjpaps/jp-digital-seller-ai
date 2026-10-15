@@ -11,34 +11,37 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // Auth page is always allowed
     if (pathname === '/auth') {
       setAuthorized(true);
       setChecking(false);
       return;
     }
-
-    const user = store.getCurrentUser();
-    if (!user) {
-      setAuthorized(false);
-      setChecking(false);
-      router.push('/auth');
-    } else {
-      setAuthorized(true);
-      setChecking(false);
-    }
+    let cancelled = false;
+    setChecking(true);
+    fetch('/api/auth/me', { cache: 'no-store', credentials: 'same-origin' })
+      .then(async response => {
+        if (!response.ok) throw Error('unauthorized');
+        const data = await response.json();
+        if (!data.authenticated || !data.user) throw Error('unauthorized');
+        if (!cancelled) {
+          store.setCurrentUser(data.user);
+          setAuthorized(true);
+          setChecking(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          store.logout();
+          setAuthorized(false);
+          setChecking(false);
+          router.replace('/auth');
+        }
+      });
+    return () => { cancelled = true; };
   }, [pathname, router]);
 
   if (checking || (!authorized && pathname !== '/auth')) {
-    return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center space-y-4">
-        <div className="w-9 h-9 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs text-gray-400 font-mono tracking-wide">
-          Acesso restrito. Redirecionando para login...
-        </p>
-      </div>
-    );
+    return <div className="min-h-[70vh] flex items-center justify-center text-sm text-gray-400">Verificando sessão segura...</div>;
   }
-
   return <>{children}</>;
 }
