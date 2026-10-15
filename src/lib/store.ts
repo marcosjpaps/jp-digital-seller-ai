@@ -661,13 +661,15 @@ class DataStore {
   public getCurrentUser(): AuthUser | null {
     if (typeof window === 'undefined') return null;
     try {
+      // Limpa credenciais antigas armazenadas no navegador por versões anteriores.
+      localStorage.removeItem(STORAGE_KEYS.USERS);
+      localStorage.removeItem(STORAGE_KEYS.USER);
       const data = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-      if (!data) {
-        return null;
-      }
+      if (!data) return null;
       const current = JSON.parse(data);
       if (!current || typeof current.email !== 'string') return null;
       delete current.password;
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(current));
       return current;
     } catch {
       return null;
