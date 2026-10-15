@@ -45,7 +45,8 @@ export default function Navbar() {
     } catch {}
   }, [pathname]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
     store.logout();
     setCurrentUser(null);
     router.push('/auth');
