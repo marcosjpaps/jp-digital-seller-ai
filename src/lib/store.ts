@@ -14,15 +14,6 @@ const STORAGE_KEYS = {
   CURRENT_USER: 'jp_seller_current_user_v2',
 };
 
-export const DEFAULT_USER: AuthUser = {
-  id: 'usr-marcos-01',
-  email: 'marcos220896antonio@gmail.com',
-  password: 'MAR9115COS',
-  name: 'Marcos Antonio',
-  role: 'admin',
-  created_at: new Date().toISOString()
-};
-
 // Initial Seed Data with real-feeling João Pinheiro - MG businesses
 const INITIAL_COMPANIES: Company[] = [
   {
@@ -664,25 +655,8 @@ class DataStore {
   }
 
   // USER AUTHENTICATION & SESSIONS
-  public getUsers(): AuthUser[] {
-    if (typeof window === 'undefined') return [DEFAULT_USER];
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.USERS);
-      if (!data) {
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify([DEFAULT_USER]));
-        return [DEFAULT_USER];
-      }
-      const parsed = JSON.parse(data);
-      // Ensure DEFAULT_USER (Marcos) exists
-      if (!parsed.some((u: AuthUser) => u.email.toLowerCase() === DEFAULT_USER.email.toLowerCase())) {
-        parsed.unshift(DEFAULT_USER);
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(parsed));
-      }
-      return parsed;
-    } catch {
-      return [DEFAULT_USER];
-    }
-  }
+  // Não armazenar cadastros nem credenciais no navegador.
+  public getUsers(): AuthUser[] { return []; }
 
   public getCurrentUser(): AuthUser | null {
     if (typeof window === 'undefined') return null;
@@ -691,7 +665,10 @@ class DataStore {
       if (!data) {
         return null;
       }
-      return JSON.parse(data);
+      const current = JSON.parse(data);
+      if (!current || typeof current.email !== 'string') return null;
+      delete current.password;
+      return current;
     } catch {
       return null;
     }
@@ -701,7 +678,8 @@ class DataStore {
     if (typeof window === 'undefined') return;
     try {
       if (user) {
-        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+        const { password: _unused, ...safeUser } = user;
+        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(safeUser));
       } else {
         localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
       }
@@ -710,44 +688,12 @@ class DataStore {
     }
   }
 
-  public registerUser(email: string, password: string, name: string): { user?: AuthUser; error?: string } {
-    const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail || !password) {
-      return { error: 'E-mail e senha são obrigatórios.' };
-    }
-    const users = this.getUsers();
-    if (users.some(u => u.email.toLowerCase() === cleanEmail)) {
-      return { error: 'Este e-mail já está cadastrado no sistema.' };
-    }
-    const newUser: AuthUser = {
-      id: `usr-${Date.now()}`,
-      email: cleanEmail,
-      password: password.trim(),
-      name: name.trim() || 'Vendedor VIP',
-      role: 'seller',
-      created_at: new Date().toISOString()
-    };
-    users.push(newUser);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-      this.setCurrentUser(newUser);
-    }
-    return { user: newUser };
+  // Usuários devem ser criados e autenticados somente pelo servidor.
+  public registerUser(_email: string, _password: string, _name: string): { user?: AuthUser; error?: string } {
+    return { error: 'Cadastro local desativado por segurança.' };
   }
-
-  public loginUser(email: string, password: string): { user?: AuthUser; error?: string } {
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanPass = password.trim();
-    const users = this.getUsers();
-    const found = users.find(u => u.email.toLowerCase() === cleanEmail);
-    if (!found) {
-      return { error: 'Usuário não encontrado com este e-mail.' };
-    }
-    if (found.password && found.password !== cleanPass) {
-      return { error: 'Senha incorreta. Verifique suas credenciais.' };
-    }
-    this.setCurrentUser(found);
-    return { user: found };
+  public loginUser(_email: string, _password: string): { user?: AuthUser; error?: string } {
+    return { error: 'Autenticação local desativada por segurança.' };
   }
 
   public logout(): void {
